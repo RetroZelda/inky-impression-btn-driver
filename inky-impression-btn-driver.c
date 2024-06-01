@@ -1,14 +1,15 @@
 #include <linux/module.h>
-#include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/kernel.h>
 #include <linux/kobject.h>
+#include <linux/gpio/consumer.h>
 
 #define NUM_BUTTONS 4
 static int gpio_pins[NUM_BUTTONS] = {5, 6, 16, 24};
-static int button_irqs[NUM_BUTTONS];
+static struct gpio_desc *button_gpios[NUM_BUTTONS]; // Change the array type to store gpio descriptors
+
 static bool button_states[NUM_BUTTONS] = {false, false, false, false};
 static const char* button_names[NUM_BUTTONS] = {"A", "B", "C", "D"};
 static struct kobject *kobj_ref;
@@ -18,7 +19,7 @@ static irqreturn_t button_irq_handler(int irq, void *dev_id)
     int i;
     for (i = 0; i < NUM_BUTTONS; i++) 
     {
-        if (irq == button_irqs[i]) 
+        if (irq == gpiod_to_irq(button_gpios[i])) // Use gpiod_to_irq to get the IRQ
         {
             button_states[i] = !button_states[i];
             printk(KERN_INFO "Inky Impression: Interrupt! Button %s state is %d\n", button_names[i], button_states[i]);
@@ -79,33 +80,31 @@ static int __init gpio_button_init(void)
 
     for (i = 0; i < NUM_BUTTONS; i++) 
     {
-        if (!gpio_is_valid(gpio_pins[i])) 
+        button_gpios[i] = gpio_to_desc(gpio_pins[i]); // Get gpio descriptor
+        if (!button_gpios[i]) 
         {
             printk(KERN_INFO "Inky Impression: Invalid GPIO %d\n", gpio_pins[i]);
             return -ENODEV;
         }
 
-        result = gpio_request(gpio_pins[i], "GPIO Button");
-        if (result) 
-        {
-            printk(KERN_INFO "Inky Impression: GPIO request failed for GPIO %d with result %d\n", gpio_pins[i], result);
-            return result;
-        }
-
-        result = gpio_direction_input(gpio_pins[i]);
+        result = gpiod_direction_input(button_gpios[i]); // Use gpiod functions
         if (result) 
         {
             printk(KERN_INFO "Inky Impression: GPIO direction set failed for GPIO %d with result %d\n", gpio_pins[i], result);
-            gpio_free(gpio_pins[i]);
             return result;
         }
 
-        button_irqs[i] = gpio_to_irq(gpio_pins[i]);
-        result = request_irq(button_irqs[i], (irq_handler_t) button_irq_handler, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "gpio_button_irq", NULL);
+        result = gpiod_to_irq(button_gpios[i]);
+        if (result < 0) 
+        {
+            printk(KERN_INFO "Inky Impression: IRQ request failed for GPIO %d with result %d\n", gpio_pins[i], result);
+            return result;
+        }
+
+        result = request_irq(result, (irq_handler_t) button_irq_handler, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "gpio_button_irq", NULL);
         if (result) 
         {
             printk(KERN_INFO "Inky Impression: IRQ request failed for GPIO %d with result %d\n", gpio_pins[i], result);
-            gpio_free(gpio_pins[i]);
             return result;
         }
     }
@@ -116,8 +115,8 @@ static int __init gpio_button_init(void)
         printk(KERN_INFO "Inky Impression: Failed to create sysfs directory\n");
         for (i = 0; i < NUM_BUTTONS; i++) 
         {
-            free_irq(button_irqs[i], NULL);
-            gpio_free(gpio_pins[i]);
+            gpiod_put(button_gpios[i]); // Free gpio descriptors
+            free_irq(gpiod_to_irq(button_gpios[i]), NULL); // Free IRQ
         }
         return -ENOMEM;
     }
@@ -129,8 +128,8 @@ static int __init gpio_button_init(void)
         kobject_put(kobj_ref);
         for (i = 0; i < NUM_BUTTONS; i++) 
         {
-            free_irq(button_irqs[i], NULL);
-            gpio_free(gpio_pins[i]);
+            gpiod_put(button_gpios[i]);
+            free_irq(gpiod_to_irq(button_gpios[i]), NULL);
         }
         return result;
     }
@@ -145,8 +144,8 @@ static void __exit gpio_button_exit(void)
     kobject_put(kobj_ref);
     for (i = 0; i < NUM_BUTTONS; i++) 
     {
-        free_irq(button_irqs[i], NULL);
-        gpio_free(gpio_pins[i]);
+        gpiod_put(button_gpios[i]);
+        free_irq(gpiod_to_irq(button_gpios[i]), NULL);
     }
     printk(KERN_INFO "Inky Impression: Module unloaded successfully\n");
 }
