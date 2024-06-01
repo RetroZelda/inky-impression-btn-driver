@@ -88,14 +88,14 @@ static int __init gpio_button_init(void)
         result = gpio_request(gpio_pins[i], "GPIO Button");
         if (result) 
         {
-            printk(KERN_INFO "Inky Impression: GPIO request failed for GPIO %d\n", gpio_pins[i]);
+            printk(KERN_INFO "Inky Impression: GPIO request failed for GPIO %d with result %d\n", gpio_pins[i], result);
             return result;
         }
 
         result = gpio_direction_input(gpio_pins[i]);
         if (result) 
         {
-            printk(KERN_INFO "Inky Impression: GPIO direction set failed for GPIO %d\n", gpio_pins[i]);
+            printk(KERN_INFO "Inky Impression: GPIO direction set failed for GPIO %d with result %d\n", gpio_pins[i], result);
             gpio_free(gpio_pins[i]);
             return result;
         }
@@ -104,7 +104,7 @@ static int __init gpio_button_init(void)
         result = request_irq(button_irqs[i], (irq_handler_t) button_irq_handler, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "gpio_button_irq", NULL);
         if (result) 
         {
-            printk(KERN_INFO "Inky Impression: IRQ request failed for GPIO %d\n", gpio_pins[i]);
+            printk(KERN_INFO "Inky Impression: IRQ request failed for GPIO %d with result %d\n", gpio_pins[i], result);
             gpio_free(gpio_pins[i]);
             return result;
         }
