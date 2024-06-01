@@ -16,7 +16,7 @@ all buttons will be reported inside:
 /sys/inky-impression/buttons
 
 and each individual button will be reported inside:
-/sys/inky-impression/btn_0
-/sys/inky-impression/btn_1
-/sys/inky-impression/btn_2
-/sys/inky-impression/btn_3
+/sys/inky-impression/btn_a
+/sys/inky-impression/btn_b
+/sys/inky-impression/btn_c
+/sys/inky-impression/btn_d
