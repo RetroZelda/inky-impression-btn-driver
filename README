@@ -1,0 +1,22 @@
+
+you need to install the headers and build essentials:
+sudo apt update
+sudo apt install raspberrypi-kernel-headers build-essential
+
+run to build:
+make
+
+run to install:
+sudo insmod inky-impression-btn-driver.ko
+
+run to uninstall:
+sudo rmmod gpio_button_driver
+
+all buttons will be reported inside:
+/sys/inky-impression/buttons
+
+and each individual button will be reported inside:
+/sys/inky-impression/btn_0
+/sys/inky-impression/btn_1
+/sys/inky-impression/btn_2
+/sys/inky-impression/btn_3
