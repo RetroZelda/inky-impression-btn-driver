@@ -8,9 +8,13 @@ make
 
 run to install:
 sudo insmod inky-impression-btn-driver.ko
+or
+make install for dkms
 
 run to uninstall:
-sudo rmmod gpio_button_driver
+sudo rmmod inky_impression_btn_driver
+or
+make uninstall for dkms
 
 all buttons will be reported inside:
 /sys/inky-impression/buttons
