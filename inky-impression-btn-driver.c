@@ -7,10 +7,10 @@
 #include <linux/gpio/consumer.h>
 
 #define NUM_BUTTONS 4
-static int gpio_pins[NUM_BUTTONS] = {5, 6, 16, 24};
+static int gpio_pins[NUM_BUTTONS] = {517, 518, 528, 536}; // GPIO mapping for 5, 6, 16, 24 via `cat /sys/kernel/debug/gpio`
 static struct gpio_desc *button_gpios[NUM_BUTTONS]; // Change the array type to store gpio descriptors
 
-static bool button_states[NUM_BUTTONS] = {false, false, false, false};
+static bool button_states[NUM_BUTTONS] = {false, true, false, false}; // button B seems to get confused so this is a hack to flip its state
 static const char* button_names[NUM_BUTTONS] = {"A", "B", "C", "D"};
 static struct kobject *kobj_ref;
 
@@ -23,10 +23,10 @@ static irqreturn_t button_irq_handler(int irq, void *dev_id)
         {
             button_states[i] = !button_states[i];
             printk(KERN_INFO "Inky Impression: Interrupt! Button %s state is %d\n", button_names[i], button_states[i]);
-            break;
+            return IRQ_HANDLED;
         }
     }
-    return IRQ_HANDLED;
+    return IRQ_NONE;
 }
 
 static ssize_t buttons_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) 
@@ -42,7 +42,7 @@ static ssize_t buttons_show(struct kobject *kobj, struct kobj_attribute *attr, c
 
 static ssize_t button_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) 
 {
-    int index = attr->attr.name[5] - 'a';  // Extract button index from attribute name (btn_a, btn_b, ...)
+    int index = attr->attr.name[4] - 'a';  // Extract button index from attribute name (btn_a, btn_b, ...)
     if (index >= 0 && index < NUM_BUTTONS) 
     {
         return sprintf(buf, "%d\n", button_states[index]);
